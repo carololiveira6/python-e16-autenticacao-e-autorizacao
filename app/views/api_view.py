@@ -37,13 +37,13 @@ def post_user():
 
     data = request.get_json()
 
-    password_to_hash = data.pop("password")
+    # password_to_hash = data.pop("password")
 
     user = UserModel(**data)
 
     user.api_key = secrets.token_hex(32)
 
-    user.password = password_to_hash
+    # user.password = password_to_hash
 
     session.add(user)
     session.commit()
