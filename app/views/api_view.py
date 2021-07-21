@@ -2,30 +2,38 @@ from flask import Blueprint, current_app, jsonify, request
 
 from app.models.user_model import UserModel
 
-from flask_httpauth import HTTPTokenAuth
-
-import secrets
+from flask_jwt_extended import jwt_required, create_access_token, get_jwt_identity
 
 from http import HTTPStatus
+
+import ipdb
 
 
 bp = Blueprint("api", __name__, url_prefix="/api")
 
-auth = HTTPTokenAuth(scheme="bearer")
 
-@auth.verify_token
-def verify_token(token):
+@bp.route('/login', methods=["POST"])
+def login():
 
-    user_token = UserModel.query.filter_by(api_key=token).first()
+    data = request.get_json()
 
-    return user_token
+    user = UserModel.query.filter_by(email=data['email']).first()
+
+    if not user:
+        return {"message": "User not found"}, HTTPStatus.NOT_FOUND
+    
+    if user.verify_password(data['password']):
+        access_token = create_access_token(identity=user)
+        return {"message": access_token}, HTTPStatus.OK
+    else:
+        return {"message": "Unauthorized"}, HTTPStatus.UNAUTHORIZED
 
 
 @bp.route("/", methods=["GET"])
-@auth.login_required()
+@jwt_required()
 def return_user():
     
-    user = auth.current_user()
+    user = get_jwt_identity()
 
     return jsonify(user)
 
@@ -37,13 +45,11 @@ def post_user():
 
     data = request.get_json()
 
-    # password_to_hash = data.pop("password")
+    password_to_hash = data.pop("password")
 
     user = UserModel(**data)
 
-    user.api_key = secrets.token_hex(32)
-
-    # user.password = password_to_hash
+    user.password = password_to_hash
 
     session.add(user)
     session.commit()
@@ -52,17 +58,27 @@ def post_user():
 
 
 @bp.route("/", methods=["PUT"])
-@auth.login_required()
+@jwt_required()
 def update_user():
+
+    required_keys = ["name", "last_name", "email"]
+
+    current_user = get_jwt_identity()
 
     session = current_app.db.session
 
     data = request.get_json()
 
-    user = auth.current_user()
+    user: UserModel = UserModel.query.get(current_user["id"])
 
     for key, value in data.items():
-        setattr(user, key, value)
+        if key in required_keys:
+            setattr(user, key, value)
+        else:
+            return {
+                "required_key": required_keys,
+                "recived_keys": data.keys(),
+            }
 
     session.add(user)
     session.commit()
@@ -71,15 +87,16 @@ def update_user():
 
 
 @bp.route("/", methods=["DELETE"])
-@auth.login_required()
-def delete_user():
-    
-    session = current_app.db.session
+@jwt_required()
+def delete():
 
-    user = auth.current_user()
+    session = current_app.db.session
+    
+    current_user = get_jwt_identity()
+
+    user: UserModel = UserModel.query.get(current_user["id"])
 
     session.delete(user)
     session.commit()
 
     return " ", HTTPStatus.NO_CONTENT
-    

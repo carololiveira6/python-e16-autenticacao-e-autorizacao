@@ -1,30 +1,30 @@
-from flask import Blueprint
-from flask_httpauth import HTTPDigestAuth
+# from flask import Blueprint
+# from flask_httpauth import HTTPDigestAuth
 
-from app.models import UserModel
-from http import HTTPStatus
-
-
-bp = Blueprint("bp_admin", __name__, url_prefix="/admin")
-auth = HTTPDigestAuth()
+# from app.models import UserModel
+# from http import HTTPStatus
 
 
-@auth.get_password
-def verify_password(email) -> None:
-
-    user: UserModel = UserModel.query.filter_by(email=email).first()
-
-    return user.password
+# bp = Blueprint("bp_admin", __name__, url_prefix="/admin")
+# auth = HTTPDigestAuth()
 
 
-@bp.get("/")
-@auth.login_required()
-def get_user_token():
+# @auth.get_password
+# def verify_password(email) -> None:
 
-    email = auth.get_auth()["username"]
+#     user: UserModel = UserModel.query.filter_by(email=email).first()
 
-    user: UserModel = UserModel.query.filter_by(email=email).first() 
+#     return user.password
 
-    user_token = user.api_key
 
-    return {"token": user_token}, HTTPStatus.OK
+# @bp.get("/")
+# @auth.login_required()
+# def get_user_token():
+
+#     email = auth.get_auth()["username"]
+
+#     user: UserModel = UserModel.query.filter_by(email=email).first() 
+
+#     user_token = user.api_key
+
+#     return {"token": user_token}, HTTPStatus.OK
